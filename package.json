@@ -1,0 +1,15 @@
+{
+  "name": "tasktracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A focused task manager built with plain HTML, CSS and JavaScript. Data is saved in localStorage.",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "test:unit": "node --test tests/task-core.test.js",
+    "test:e2e": "node --test tests/e2e.test.js"
+  },
+  "engines": {
+    "node": ">=21"
+  },
+  "license": "MIT"
+}
