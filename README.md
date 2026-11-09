@@ -52,7 +52,8 @@ Stored under the `tasktracker:v1` key:
       "priority": "high",
       "completed": false,
       "createdAt": 1731196800000,
-      "updatedAt": 1731196800000
+      "updatedAt": 1731196800000,
+      "completedAt": null
     }
   ]
 }

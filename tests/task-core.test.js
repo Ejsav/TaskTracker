@@ -35,7 +35,7 @@ test('createTask builds a complete active task', () => {
   assert.ok(task.id.length > 0);
   assert.deepEqual(
     { ...task, id: undefined },
-    { id: undefined, title: 'Write report', priority: 'high', completed: false, createdAt: 1000, updatedAt: 1000 }
+    { id: undefined, title: 'Write report', priority: 'high', completed: false, createdAt: 1000, updatedAt: 1000, completedAt: null }
   );
 });
 
@@ -55,9 +55,9 @@ test('createId avoids ids that are already taken', () => {
 });
 
 test('updateTask changes only whitelisted fields and preserves the rest', () => {
-  const task = { id: 'abc', title: 'Old', priority: 'low', completed: true, createdAt: 100, updatedAt: 100 };
-  const updated = Core.updateTask(task, { title: ' New ', priority: 'high', id: 'hijack', createdAt: 1 }, 500);
-  assert.deepEqual(updated, { id: 'abc', title: 'New', priority: 'high', completed: true, createdAt: 100, updatedAt: 500 });
+  const task = { id: 'abc', title: 'Old', priority: 'low', completed: true, createdAt: 100, updatedAt: 150, completedAt: 150 };
+  const updated = Core.updateTask(task, { title: ' New ', priority: 'high', id: 'hijack', createdAt: 1, completedAt: 9 }, 500);
+  assert.deepEqual(updated, { id: 'abc', title: 'New', priority: 'high', completed: true, createdAt: 100, updatedAt: 500, completedAt: 150 });
   assert.equal(task.title, 'Old', 'original must not be mutated');
 });
 
@@ -120,7 +120,7 @@ test('parseStoredTasks salvages valid records and drops invalid ones', () => {
   assert.equal(result.tasks.length, 4);
 
   const [valid, repaired, dupe, unsafe] = result.tasks;
-  assert.deepEqual(valid, { id: 'good', title: 'Valid', priority: 'high', completed: true, createdAt: 5, updatedAt: 6 });
+  assert.deepEqual(valid, { id: 'good', title: 'Valid', priority: 'high', completed: true, createdAt: 5, updatedAt: 6, completedAt: 6 });
   assert.equal(repaired.priority, 'medium');
   assert.equal(repaired.completed, false, 'only literal true counts as completed');
   assert.equal(repaired.createdAt, 1000);
@@ -191,5 +191,27 @@ test('serialized output contains only the documented fields', () => {
   const task = Core.createTask({ title: 'Clean', priority: 'low' }, { now: 1 });
   const parsed = JSON.parse(Core.serializeTasks([task]));
   assert.equal(parsed.version, Core.SCHEMA_VERSION);
-  assert.deepEqual(Object.keys(parsed.tasks[0]).sort(), ['completed', 'createdAt', 'id', 'priority', 'title', 'updatedAt']);
+  assert.deepEqual(Object.keys(parsed.tasks[0]).sort(), ['completed', 'completedAt', 'createdAt', 'id', 'priority', 'title', 'updatedAt']);
+});
+
+test('completedAt is set on completion, cleared on restore, and kept through edits', () => {
+  const task = Core.createTask({ title: 'Track me' }, { now: 100 });
+  const done = Core.updateTask(task, { completed: true }, 200);
+  assert.equal(done.completedAt, 200);
+  const edited = Core.updateTask(done, { title: 'Track me better', priority: 'high' }, 300);
+  assert.equal(edited.completedAt, 200, 'editing a completed task keeps its completion time');
+  assert.equal(edited.updatedAt, 300);
+  const restored = Core.updateTask(edited, { completed: false }, 400);
+  assert.equal(restored.completedAt, null);
+  assert.equal(Core.updateTask(restored, { completed: true }, 500).completedAt, 500);
+});
+
+test('normalizeTask derives completedAt for legacy or inconsistent records', () => {
+  const seen = new Set();
+  const legacy = Core.normalizeTask({ id: 'a', title: 'Old', completed: true, createdAt: 10, updatedAt: 20 }, seen, 99);
+  assert.equal(legacy.completedAt, 20, 'falls back to updatedAt');
+  const active = Core.normalizeTask({ id: 'b', title: 'Open', completed: false, completedAt: 50 }, seen, 99);
+  assert.equal(active.completedAt, null, 'active tasks never carry a completion time');
+  const early = Core.normalizeTask({ id: 'c', title: 'Odd', completed: true, createdAt: 30, updatedAt: 40, completedAt: 5 }, seen, 99);
+  assert.equal(early.completedAt, 40, 'completion before creation is repaired');
 });

@@ -328,7 +328,7 @@
     li.querySelector('.priority-label').textContent = label;
 
     var date = li.querySelector('.task-date');
-    date.textContent = (task.completed ? 'Completed ' : 'Added ') + formatDate(task.completed ? task.updatedAt : task.createdAt);
+    date.textContent = (task.completed ? 'Completed ' : 'Added ') + formatDate(task.completed ? task.completedAt : task.createdAt);
 
     var toggle = li.querySelector('[data-role="toggle"]');
     toggle.checked = task.completed;
@@ -403,12 +403,22 @@
     els.empty.hidden = false;
   }
 
+  var renderedNoticeKey = '';
+
   function renderNotice() {
-    els.saveStatus.textContent = state.canSave
+    var status = state.canSave
       ? 'Tasks are saved automatically in this browser.'
       : 'Changes aren’t being saved right now.';
+    if (els.saveStatus.textContent !== status) els.saveStatus.textContent = status;
+
+    // Touch the alert region only when its content really changes, so
+    // screen readers don't re-announce it on every render.
     var notice = state.notice;
-    if (!notice || state.dismissedNotice === notice.reason) {
+    var visible = notice && state.dismissedNotice !== notice.reason;
+    var key = visible ? notice.kind + '|' + notice.reason + '|' + notice.message : '';
+    if (key === renderedNoticeKey) return;
+    renderedNoticeKey = key;
+    if (!visible) {
       els.notice.hidden = true;
       els.notice.removeAttribute('role');
       return;

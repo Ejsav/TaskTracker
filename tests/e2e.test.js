@@ -239,6 +239,7 @@ test('edits title and priority without losing other task data', { skip }, async 
   assert.equal(after.id, before.id);
   assert.equal(after.completed, true, 'completion state preserved');
   assert.equal(after.createdAt, before.createdAt, 'creation time preserved');
+  assert.equal(after.completedAt, before.completedAt, 'completion time preserved');
   assert.ok(after.updatedAt >= before.updatedAt);
   assert.equal(await row(page, 'Final proposal').locator('.priority-label').textContent(), 'High');
   assert.deepEqual(await counts(page), { total: 1, active: 0, completed: 1 });
@@ -703,6 +704,46 @@ test('exposes accessible names and structure for every control', { skip }, async
   await row(page, 'Label check').locator('[data-role="edit"]').click();
   assert.equal(await page.getByRole('textbox', { name: 'Task title' }).count(), 1);
   assert.equal(await page.getByRole('form', { name: 'Edit task' }).count(), 1);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('does not re-announce an active warning on every change', { skip }, async () => {
+  const { context, page, errors } = await openApp({
+    initScript: () => {
+      Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } });
+    }
+  });
+  await page.evaluate(() => {
+    window.__noticeMutations = 0;
+    new MutationObserver((records) => { window.__noticeMutations += records.length; })
+      .observe(document.getElementById('notice'), { subtree: true, childList: true, characterData: true, attributes: true });
+  });
+  await addTask(page, 'One');
+  await addTask(page, 'Two');
+  await row(page, 'One').locator('[data-role="toggle"]').check();
+  await page.click('label[for="status-completed"]');
+  assert.equal(await page.evaluate(() => window.__noticeMutations), 0);
+  assert.equal(await page.isVisible('#notice'), true);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('shows the completion date, not the last edit date, for completed tasks', { skip }, async () => {
+  const { context, page, errors } = await openApp();
+  const yesterday = Date.now() - 86400000 * 3;
+  await page.evaluate(({ key, ts }) => localStorage.setItem(key, JSON.stringify({
+    version: 1,
+    tasks: [{ id: 'done-1', title: 'Old win', priority: 'low', completed: true, createdAt: ts, updatedAt: ts, completedAt: ts }]
+  })), { key: KEY, ts: yesterday });
+  await page.reload();
+  const expected = await page.evaluate((ts) => 'Completed ' + new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(ts)), yesterday);
+  assert.equal(await row(page, 'Old win').locator('.task-date').textContent(), expected);
+  await row(page, 'Old win').locator('[data-role="edit"]').click();
+  await page.fill('[data-role="edit-title"]', 'Old win, renamed');
+  await page.press('[data-role="edit-title"]', 'Enter');
+  assert.equal(await row(page, 'Old win, renamed').locator('.task-date').textContent(), expected);
+  assert.equal((await stored(page)).tasks[0].completedAt, yesterday);
   assert.deepEqual(errors, []);
   await context.close();
 });

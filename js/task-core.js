@@ -97,7 +97,8 @@
       priority: isPriority(input.priority) ? input.priority : DEFAULT_PRIORITY,
       completed: false,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      completedAt: null
     };
   }
 
@@ -126,13 +127,20 @@
     if (next.title === task.title && next.priority === task.priority && next.completed === task.completed) {
       return task;
     }
+    var updatedAt = isTimestamp(now) ? Math.max(now, task.createdAt) : Date.now();
+    var completedAt = null;
+    if (next.completed) {
+      // Only a change of completion state moves completedAt; edits keep it.
+      completedAt = task.completed && isTimestamp(task.completedAt) ? task.completedAt : updatedAt;
+    }
     return {
       id: task.id,
       title: next.title,
       priority: next.priority,
       completed: next.completed,
       createdAt: task.createdAt,
-      updatedAt: isTimestamp(now) ? Math.max(now, task.createdAt) : Date.now()
+      updatedAt: updatedAt,
+      completedAt: completedAt
     };
   }
 
@@ -152,14 +160,20 @@
 
     var createdAt = isTimestamp(raw.createdAt) ? raw.createdAt : now;
     var updatedAt = isTimestamp(raw.updatedAt) && raw.updatedAt >= createdAt ? raw.updatedAt : createdAt;
+    var completed = raw.completed === true;
+    var completedAt = null;
+    if (completed) {
+      completedAt = isTimestamp(raw.completedAt) && raw.completedAt >= createdAt ? raw.completedAt : updatedAt;
+    }
 
     return {
       id: id,
       title: value.slice(0, MAX_TITLE_LENGTH),
       priority: isPriority(raw.priority) ? raw.priority : DEFAULT_PRIORITY,
-      completed: raw.completed === true,
+      completed: completed,
       createdAt: createdAt,
-      updatedAt: updatedAt
+      updatedAt: updatedAt,
+      completedAt: completedAt
     };
   }
 
