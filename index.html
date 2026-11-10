@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="A focused task manager. Add, prioritize, and complete tasks — saved automatically in your browser.">
+  <title>TaskTracker</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/task-core.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#task-list-heading">Skip to task list</a>
+
+  <div class="app">
+    <header class="app-header">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <rect width="32" height="32" rx="8"></rect>
+          <path d="M9 16.5l4.5 4.5L23 11.5"></path>
+        </svg>
+        <h1 class="brand-name">TaskTracker</h1>
+      </div>
+
+      <dl class="stats" aria-label="Task summary">
+        <div class="stat">
+          <dt>Total</dt>
+          <dd id="count-total">0</dd>
+        </div>
+        <div class="stat">
+          <dt>Active</dt>
+          <dd id="count-active">0</dd>
+        </div>
+        <div class="stat">
+          <dt>Completed</dt>
+          <dd id="count-completed">0</dd>
+        </div>
+      </dl>
+    </header>
+
+    <div id="notice" class="notice" hidden>
+      <svg class="notice-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <path d="M10 2.5 1.8 17h16.4L10 2.5Z"></path>
+        <path d="M10 8v4M10 14.5v.01"></path>
+      </svg>
+      <p id="notice-message" class="notice-message"></p>
+      <button type="button" id="notice-dismiss" class="icon-btn notice-dismiss" aria-label="Dismiss message">
+        <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5 5 15"></path></svg>
+      </button>
+    </div>
+
+    <main class="main">
+      <section class="card composer" aria-labelledby="composer-heading">
+        <h2 id="composer-heading" class="visually-hidden">Add a task</h2>
+        <form id="task-form" class="composer-form" novalidate>
+          <div class="field field-title">
+            <div class="label-row">
+              <label for="task-title">New task</label>
+              <span id="task-title-count" class="char-count" hidden></span>
+            </div>
+            <input id="task-title" name="title" type="text" autocomplete="off" maxlength="200"
+                   placeholder="What needs to get done?" aria-describedby="task-title-error task-title-count" required>
+          </div>
+          <div class="field field-priority">
+            <label for="task-priority">Priority</label>
+            <select id="task-priority" name="priority">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary composer-submit">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 4v12M4 10h12"></path></svg>
+            Add task
+          </button>
+          <p id="task-title-error" class="field-error" hidden></p>
+        </form>
+      </section>
+
+      <section class="tasks" aria-labelledby="task-list-heading">
+        <div class="tasks-head">
+          <h2 id="task-list-heading" class="tasks-heading" tabindex="-1">Tasks</h2>
+          <p id="results-summary" class="results-summary"></p>
+        </div>
+
+        <div class="toolbar">
+          <fieldset class="segmented">
+            <legend class="visually-hidden">Show tasks by status</legend>
+            <input type="radio" name="status-filter" id="status-all" value="all" checked>
+            <label for="status-all">All <span class="seg-count" data-count="total">0</span></label>
+            <input type="radio" name="status-filter" id="status-active" value="active">
+            <label for="status-active">Active <span class="seg-count" data-count="active">0</span></label>
+            <input type="radio" name="status-filter" id="status-completed" value="completed">
+            <label for="status-completed">Completed <span class="seg-count" data-count="completed">0</span></label>
+          </fieldset>
+
+          <div class="field field-inline">
+            <label for="priority-filter">Priority</label>
+            <select id="priority-filter">
+              <option value="all" selected>All priorities</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <ul id="task-list" class="task-list" aria-labelledby="task-list-heading"></ul>
+
+        <div id="empty-state" class="empty-state" hidden>
+          <svg class="empty-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+            <rect x="9" y="7" width="30" height="36" rx="5"></rect>
+            <path d="M17 19l3 3 6-6M17 31h14"></path>
+          </svg>
+          <h3 id="empty-title" class="empty-title"></h3>
+          <p id="empty-body" class="empty-body"></p>
+          <button type="button" id="empty-reset" class="btn btn-secondary" hidden>Clear filters</button>
+        </div>
+      </section>
+
+      <div id="toast" class="toast" hidden>
+        <p id="toast-message" class="toast-message"></p>
+        <button type="button" id="toast-action" class="toast-action"></button>
+        <button type="button" id="toast-dismiss" class="icon-btn toast-dismiss" aria-label="Dismiss notification">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5 5 15"></path></svg>
+        </button>
+      </div>
+
+      <div id="live-region" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    </main>
+
+    <footer class="app-footer">
+      <p id="save-status">Tasks are saved automatically in this browser.</p>
+    </footer>
+  </div>
+
+
+
+  <template id="task-template">
+    <li class="task">
+      <input type="checkbox" class="task-toggle" data-role="toggle">
+      <div class="task-body">
+        <p class="task-title"></p>
+        <p class="task-meta">
+          <span class="priority-badge">
+            <svg class="priority-icon" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+              <rect class="bar bar-1" x="1" y="9" width="3" height="4" rx="1"></rect>
+              <rect class="bar bar-2" x="5.5" y="5.5" width="3" height="7.5" rx="1"></rect>
+              <rect class="bar bar-3" x="10" y="1.5" width="3" height="11.5" rx="1"></rect>
+            </svg>
+            <span class="priority-label"></span><span class="visually-hidden"> priority</span>
+          </span>
+          <span class="task-date"></span>
+        </p>
+      </div>
+      <div class="task-actions">
+        <button type="button" class="icon-btn task-action" data-role="edit">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5Z"></path></svg>
+          <span class="action-text">Edit</span>
+        </button>
+        <button type="button" class="icon-btn task-action task-action-danger" data-role="delete">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 6h12M8 6V4h4v2M6 6l.8 10h6.4L14 6"></path></svg>
+          <span class="action-text">Delete</span>
+        </button>
+      </div>
+    </li>
+  </template>
+
+  <template id="edit-template">
+    <li class="task task-editing">
+      <form class="edit-form" novalidate>
+        <div class="field edit-title-field">
+          <div class="label-row">
+            <label class="edit-label" data-for="title">Task title</label>
+            <span class="char-count edit-count" hidden></span>
+          </div>
+          <input type="text" class="edit-title" data-role="edit-title" maxlength="200" autocomplete="off" required>
+        </div>
+        <div class="field edit-priority-field">
+          <label class="edit-label" data-for="priority">Priority</label>
+          <select class="edit-priority" data-role="edit-priority">
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="edit-actions">
+          <button type="submit" class="btn btn-primary btn-sm" data-role="save">Save</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-role="cancel">Cancel</button>
+        </div>
+        <p class="field-error edit-error" hidden></p>
+      </form>
+    </li>
+  </template>
+</body>
+</html>
