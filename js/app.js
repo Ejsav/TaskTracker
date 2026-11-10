@@ -237,7 +237,7 @@
 
   /** View preferences are a convenience: failures here are silent. */
   function saveFilters() {
-    if (storage.writable) writeStored(VIEW_KEY, JSON.stringify(state.filters));
+    writeStored(VIEW_KEY, JSON.stringify(state.filters)); // no-op without storage
   }
 
   function loadFilters() {
