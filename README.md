@@ -71,7 +71,7 @@ npm run test:unit    # core logic only, zero dependencies
 npm run test:e2e     # browser tests (needs Playwright)
 ```
 
-The end-to-end suite drives the real page in headless Chromium. It is skipped automatically if Playwright isn't installed. To enable it:
+The end-to-end suite drives the real page in headless Chromium by default; set `BROWSER=firefox` or `BROWSER=webkit` to use another engine (CI runs all three). It is skipped automatically if Playwright isn't installed. To enable it:
 
 ```bash
 npm i -D playwright && npx playwright install chromium

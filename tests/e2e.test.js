@@ -20,12 +20,16 @@ try {
 
 const APP_URL = pathToFileURL(path.join(__dirname, '..', 'index.html')).href;
 const KEY = 'tasktracker:v1';
+const BROWSER = process.env.BROWSER || 'chromium';
+if (!['chromium', 'firefox', 'webkit'].includes(BROWSER)) {
+  throw new Error(`Unknown BROWSER "${BROWSER}" (use chromium, firefox or webkit)`);
+}
 const skip = playwright ? false : 'playwright is not installed';
 
 let browser;
 
 test.before(async () => {
-  if (playwright) browser = await playwright.chromium.launch();
+  if (playwright) browser = await playwright[BROWSER].launch();
 });
 
 test.after(async () => {

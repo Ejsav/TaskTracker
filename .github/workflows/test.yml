@@ -7,14 +7,21 @@ on:
 
 jobs:
   test:
+    name: test (${{ matrix.browser }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Install Playwright (test-only, not a runtime dependency)
-        run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium
+        run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps ${{ matrix.browser }}
       - name: Run unit and end-to-end tests
         run: npm test
+        env:
+          BROWSER: ${{ matrix.browser }}
